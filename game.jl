@@ -1,14 +1,15 @@
 #Global variables
-global num_simulations = 10
-global N = 10
+global N = 20000
 global c = 2
+global turn = 'x'
+global x_moves = 0
+global o_moves = 0
 
 abstract type Player end
 mutable struct Human <: Player
    disc::Char
    won::Bool
 end
-
 mutable struct AI <: Player
    disc::Char
    won::Bool
@@ -48,30 +49,20 @@ function copyBoard(b::gameBoard, newb::gameBoard)
    newb.lowest = deepcopy(b.lowest)
 end
 
-
 function insert(b::gameBoard, col::Int, disc::Char)::Bool
-   # println("\nInserting in column ",col)
-
    #check column is legal, i.e. not full, and not out of bounds
    if col > b.cols || col < 1 || b.lowest[col] == 0
-      # println("illegal column")
       return false
    end
-
-   #insert
    b.board[b.lowest[col],col]= disc
-
    #update lowest space
    b.lowest[col]-= 1
-   # display(b)
    return true
 end
 
 function remove(b::gameBoard, col::Int)
-   # println("removing from column ",col)
    b.lowest[col]+= 1
    b.board[b.lowest[col],col]= ' '
-   # display(b)
 end
 
 function display(b::gameBoard)
@@ -81,22 +72,15 @@ function display(b::gameBoard)
     end
     println()
    end
-   # println(b.lowest)
-   # for i = 1:2*b.cols
-   #    print("-")
-   # end
-   # println()
    for i = 1:b.cols
       print(i," ")
    end
    println()
-
 end
 
 #Checks of boards is full and returns true/false
 function is_full(b::gameBoard)::Bool
    if maximum(b.lowest) == 0
-      # println("full")
       return true
    else
       return false
@@ -105,7 +89,6 @@ end
 
 #Tests of player p has four consecutive discs
 function test_win(b::gameBoard, d::Char)::Bool
-   # println("\ntesting win ", d)
    if test_horizontal(b,d) || test_vertical(b,d) || test_diagonal_up(b,d) || test_diagonal_down(b,d)
       return true
    end
@@ -114,11 +97,9 @@ end
 
 #Tests if theres a horizontal win, checks rows top to bottom
 function test_horizontal(b::gameBoard, d::Char)::Bool
-   # println("testing horizontal win")
    for i = 1:b.rows
       for j= 1: b.cols-3
          if b.board[i,j]==d && b.board[i,j+1]==d && b.board[i,j+2]==d && b.board[i,j+3]==d
-            # println("\nhorizontal win at: ",i,",",j," for ",d)
             return true
          end
       end
@@ -128,11 +109,9 @@ end
 
 #Tests if theres a vertical win, checks cols left to right
 function test_vertical(b::gameBoard, d::Char)::Bool
-   # println("testing vertical win")
    for j=1: b.cols
       for i= 1 : b.rows-3
          if b.board[i,j]==d && b.board[i+1,j]==d && b.board[i+2,j]==d && b.board[i+3,j]==d
-            # println("\nvertical win at: ",i,",",j," for ",d)
             return true
          end
       end
@@ -142,11 +121,9 @@ end
 
 #Tests if theres a diagonal win, checks each in-bound disc left to right up diagonal (row wise top to bottom)
 function test_diagonal_up(b::gameBoard, d::Char)::Bool
-   # println("testing up-diagonal win ", d)
    for i=4:b.rows
       for j=1:b.cols-3
          if b.board[i,j]==d && b.board[i-1,j+1]==d && b.board[i-2,j+2]==d && b.board[i-3,j+3]==d
-            # println("\nup-diagonal win at: ",i,",",j," for ",d)
             return true
          end
       end
@@ -156,11 +133,9 @@ end
 
 #Tests if there's a down-diagonal win
 function test_diagonal_down(b::gameBoard, d::Char)::Bool
-   # println("testing down-diagonal win")
    for i=1:b.rows - 3
       for j= 1:b.cols-3
          if b.board[i,j]==d && b.board[i+1,j+1]==d && b.board[i+2,j+2]==d && b.board[i+3,j+3]==d
-            # println("\ndown-diagonal win at: ",i,",",j," for ",d)
             return true
          end
       end
@@ -175,8 +150,6 @@ function game_over(b::gameBoard)::Bool
    end
    return false
 end
-################     end gameBoard functions      ################
-
 
 #switch turn
 function toggle(p1::Player, p2::Player, curr::Player)
@@ -200,15 +173,9 @@ end
 
 ################       MINIMAX       ################
 function minimax(b::gameBoard, l::Int, lookahead::Int, maximizer::Bool, d::Char, lastcol::Int)::Int
-   # println("minimax, level: " ,l, " player: ", d," max? ", maximizer,"last played col: ", lastcol)
-   # println("In minimax")
-
    #base case
    if l > lookahead || game_over(b)
-      # println("Leaf at level: " , l-1)
-      # display(b)
       s = eval_func(b, switch(d), lastcol, !maximizer)
-      # println("Score: ",s,"\n")
       return s
    end
 
@@ -219,7 +186,6 @@ function minimax(b::gameBoard, l::Int, lookahead::Int, maximizer::Bool, d::Char,
       for i=1: b.cols
          new_b = b
          if insert(new_b, i, d)
-            # println(d," insertion in ", i)
             score = minimax(new_b,l+1, lookahead, !maximizer, switch(d),i)
             scores[i] = score
             remove(new_b,i)
@@ -228,9 +194,7 @@ function minimax(b::gameBoard, l::Int, lookahead::Int, maximizer::Bool, d::Char,
             scores[i] = score
          end
          max_score = max(score, max_score)
-         # println("propogating: ", max_score)
       end
-      # println(scores)
       return max_score
 
    else
@@ -238,7 +202,6 @@ function minimax(b::gameBoard, l::Int, lookahead::Int, maximizer::Bool, d::Char,
       for i=1: b.cols
          new_b = b
          if insert(new_b, i, d)
-            # println(d," insertion in ", i)
             score = minimax(new_b,l+1, lookahead, !maximizer, switch(d),i)
             remove(new_b,i)
          else
@@ -251,21 +214,16 @@ function minimax(b::gameBoard, l::Int, lookahead::Int, maximizer::Bool, d::Char,
 end
 
 function eval_func(b::gameBoard, c::Char, col::Int, m::Bool)::Int
-   # println("In eval for ", c)
-   # display(b)
    max = c
    #assess for maximizer
    if !m
       max = switch(c)
    end
-   # println("In eval for ", max)
    if test_win(b,max)
       return 256
    elseif test_win(b,switch(max))   #&& m || test_win(b,c) && !m
-      # println("Switched: ", switch(c))
       return -256
    elseif is_full(b) #draw game
-      # println("full")
       return 2
    elseif m
       return calculate_score(b,max,col)
@@ -275,7 +233,6 @@ function eval_func(b::gameBoard, c::Char, col::Int, m::Bool)::Int
 end
 
 function calculate_score(b::gameBoard, c::Char, col::Int)::Int
-   # println("Calculating score")
    return vertical_streak(b,c,col)  + horizontal_streak(b,c,col) + updiag_streak(b,c,col)+ downdiag_streak(b,c,col)
 end
 
@@ -286,7 +243,6 @@ function vertical_streak(b::gameBoard, c::Char, col::Int)::Int
       count += 1
       row +=1
    end
-   # println("vertical streak score: ", count^4)
    return count^4
 end
 
@@ -306,7 +262,6 @@ function horizontal_streak(b::gameBoard, c::Char, col::Int)::Int
       count +=1
       curr_col += 1
    end
-   # println("horizontal streak score: ", count^4)
    return count^4
 end
 
@@ -329,8 +284,6 @@ function updiag_streak(b::gameBoard, c::Char, col::Int)::Int
       curr_col += 1
       row -=1
    end
-   # println("up-diag streak score: ", count^4)
-
    return count^4
 end
 
@@ -353,8 +306,6 @@ function downdiag_streak(b::gameBoard, c::Char, col::Int)::Int
       curr_col += 1
       row +=1
    end
-   # println("down-diag streak score: ", count^4)
-
    return count^4
 end
 
@@ -375,37 +326,28 @@ function max_score_col(a::Array{Int})::Int
       if a[i]>max
          index = i
          max = a[i]
-         # println("new max: ", max)
       end
    end
-
-   println("max: ", max)
    for i = 1: length(a)  #find all ties and add to array
       if a[i] == max
          max = a[i]
          push!(ties, i)
       end
    end
-
    return ties[rand(1:length(ties))]
-   #return index
 end
 
 #function return index of column with max value, i.e. column that should be played
 function determine_move(b::gameBoard,c::Char)::Int
-   # println("determining move")
    scores = Array{Int}(undef,1, b.cols)
    for i = 1: b.cols
       if insert(b, i, c)
-         # println("Calling minimax for ", c," col: ", i)
          scores[i] = minimax(b, 1, 6, false, switch(c),i) ########
-         # println("at col:",i," score: ", scores[i])
          remove(b,i)
       else
          scores[i] = -1000
       end
    end
-   println("scores array for next move: " , scores)
    return max_score_col(scores)
 end
 
@@ -414,11 +356,12 @@ end
 mutable struct state
    board::gameBoard
    cols::Int
-   wins::Int
+   wins::Float64
    visits::Int
    prev_state::state
    next_states::Array{state}
    turn::Char
+   legal::Array{Int} #hold indices of legal cols
 
    function state(b::gameBoard,c::Char) #root takes in board
       this = new()
@@ -428,7 +371,8 @@ mutable struct state
       this.visits = 0
       #this.prev_state = nothing
       this.next_states = Array{state}(undef,1, this.cols)
-      this.turn = switch(c)
+      this.turn = switch(c) #last played, current turn reflected in children
+      this.legal = Array{state}(undef,0)
       return this
    end
 
@@ -443,9 +387,11 @@ mutable struct state
       this.turn= switch(prev_state.turn)
       insert(this.board,i,this.turn)
       prev_state.next_states[i] = this
+      this.legal = Array{state}(undef,0)
       return this
    end
 end
+
 #given a state, check if child column is legal
 function legal(s::state, col::Int)Bool
    if insert(s.board,col, ' ')
@@ -454,53 +400,128 @@ function legal(s::state, col::Int)Bool
    end
    return false
 end
-
-#return best move
-function determine_move_MCTS(b::gameBoard, c::Char)::Int
-   n = 1
-   max_sim = 1
-
-   #initialize, expand root
-   root = state(b,c)
-   root.visits += 1
-   for i=1:root.cols
-      if legal(root,i)
-         state(root,i)
+#give a state, return all legal next states (fill legal array with col indices)
+function getLegalCols(s::state)
+   for i=1:s.cols
+      if insert(s.board,i, ' ')
+         remove(s.board,i)
+         push!(s.legal, i)
       end
    end
-
-   while (n <=  max_sim)
-      println("simulation: ", n)
-      run_simulations(root,c)
-      n += 1
+end
+function getLegalCols(b::gameBoard, legal::Array{Int} )
+   # legal = Int[] #array of indices
+   for i=1:b.cols
+      if insert(b,i, ' ')
+         remove(b,i)
+         push!(legal, i)
+      end
    end
-   return 0
+end
+#return best move
+function determine_move_MCTS(b::gameBoard, c::Char)::Int
+   #initialize, expand root and create children states
+   root = state(b,c)
+   getLegalCols(root)
+   for i in eachindex(root.legal)
+      state(root,root.legal[i])
+   end
+   return run_simulations(root,c)
 end
 
-function run_simulations(s::state,c::Char)
-
-   println("root state:")
-   printState(s)
+function run_simulations(s::state,c::Char)::Int
    curr_state = s
+   n = 0
+   while n < N
+         #if leaf node
+         while !leaf(curr_state)
+            #calculate UCT for all children and select max
+            max = curr_state.legal[1]  #col index of first child
+            max_val = UCT(curr_state.next_states[curr_state.legal[1]])
+            for i=2:length(curr_state.legal)
+               m = UCT(curr_state.next_states[curr_state.legal[i]])
+               if m > max_val
+                  max = curr_state.legal[i]
+                  max_val = m
+               end
+            end
+            curr_state = curr_state.next_states[max]
+         end
 
-   #if leaf node
-   # while !leaf(curr_state)
-   #    println("selecting")
-   #
-   # end
-   UCT(curr_state)
-   #reached a leaf
+         #reached a leaf: if not visited before: rollout, else expand
+         result = ' '
+         if curr_state.visits == 0
+            result = rollout(curr_state)
+         elseif length(curr_state.legal) == 0
+            result = rollout(curr_state)
+         else
+            getLegalCols(curr_state)
+            for i in eachindex(curr_state.legal)
+               state(curr_state, curr_state.legal[i])
+            end
+            ind = curr_state.legal[rand(1:length(curr_state.legal))]
+            curr_state = curr_state.next_states[ind]
+            result = rollout(curr_state)
+         end
 
+         #update stats for terminal node then back-propagate to root
+         curr_state.visits += 1
+         if result == curr_state.turn
+            curr_state.wins += 1
+         end
+         while isdefined(curr_state, :prev_state)
+            curr_state = curr_state.prev_state
+            curr_state.visits += 1
+            if curr_state.turn == result
+               curr_state.wins += 1
+            elseif result == 'd'
+               curr_state.wins += 0.5
+            end
+         end
+         n+=1
+   end
 
-
+   #calculate UCT for all children and select max and return
+   max = curr_state.legal[1]  #col index of first child
+   max_val = UCT(curr_state.next_states[curr_state.legal[1]])
+   for i=2:length(curr_state.legal)
+      m = UCT(curr_state.next_states[curr_state.legal[i]])
+      if m > max_val
+         max = curr_state.legal[i]
+         max_val = m
+      end
+   end
+   return max
 end
 
+function rollout(s::state)::Char
+   b_copy = gameBoard(s.board) #board copy for rollout
+   legal = Int[]
+   turn = switch(s.turn)
 
-function UCT(s)
-   println("N= ", N)
-   println("c= ",c)
+   while !game_over(b_copy)
+      getLegalCols(b,legal)
+      ind = legal[rand(1:length(legal))]
+      insert(b_copy, ind, turn)
+      turn = switch(turn)
+   end
 
-   return
+   #whats the value of the rollout??
+   if test_win(b_copy, 'x')
+      return 'x'
+   elseif test_win(b_copy, 'o')
+      return 'o'
+   elseif is_full(b_copy)
+      return 'd'
+   end
+end
+
+function UCT(s::state)::Float64
+   if s.visits == 0
+      return c*sqrt(log(N)/s.visits)
+   else
+      return s.wins/s.visits + c*sqrt(log(N)/s.visits)
+   end
 end
 
 #randomly chooses column to play
@@ -510,11 +531,13 @@ end
 
 
 function printState(s::state)
-   println("board: ")
+   println("\n state board: ")
    display(s.board)
+   println("turn: ", s.turn)
    println("wins: ",s.wins, " visits: ",s.visits)
    if isdefined(s, :prev_state)
-      println("parent: ", s.prev_state)
+      # println("parent: ")
+      # display(s.prev_state.board)
    else
       println("no parent")
    end
@@ -524,7 +547,7 @@ function printState(s::state)
          print(" ",i)
       end
    end
-   println()
+   println("\n")
 end
 
 function leaf(s::state)::Bool
@@ -536,131 +559,42 @@ function leaf(s::state)::Bool
    return true
 end
 
-################       MAIN       ################
-
-b = gameBoard(6,7)
-# insert(b, 1, 'x')
-# insert(b, 1, 'o')
-# # insert(b, 1, 'o')
-# # insert(b, 1, 'x')
-#
-# insert(b, 2, 'x')
-# insert(b, 2, 'x')
-# # insert(b, 2, 'o')
-# insert(b, 2, 'o')
-#
-# insert(b, 3, 'x')
-# insert(b, 3, 'o')
-# insert(b, 3, 'x')
-# insert(b, 3, 'x')
-# insert(b, 3, 'x')
-# insert(b, 3, 'o')
-# println("testing")
-#display(b)
-
-#newb = gameBoard(b)
-#display(newb)
-
-# root = state(b)
-# display(root.board)
-# println(isdefined(root, :prev_state))
-# println(root.next_states)
-#
-# child = state(root,3,'o')
-# display(child.board)
-# println(isdefined(child, :prev_state))
-# println(root.next_states[3].board)
-# println(legal(child, 8))
-#
-
-determine_move_MCTS(b,'o')
-
-
 #################     Human VS Human Game   ###############
-function H_vs_H()
+function H_vs_H(b::gameBoard)
    player_x = Human('x',false)
    player_o = Human('o',false)
    turn = Human(player_x.disc, false)
    while(!game_over(b))
-
       valid = false
       while(!valid)
-         print("Enter next move for ",turn.disc,":")
+         print("\nEnter next move for ",turn.disc,":")
          m = parse(Int, readline())
-         println("your move: ", m)
          valid = insert(b, m, turn.disc)
       end
+      if turn.disc == 'x'
+         global x_moves += 1
+      else
+         global o_moves += 1
+      end
       display(b)
-
       toggle(player_x, player_o, turn)
    end
-   results(b,player_x, player_o)
+   results(b)
 end
-
-
-##################    Minimax game     ###############
-global turn = 'x'
-global x_moves = 0
-global o_moves = 0
-# insert(b, play_rand(b), turn)
-# turn = switch(turn)
-# display(b)
-#
-# insert(b, play_rand(b), turn)
-# turn = switch(turn)
-# display(b)
-#
-# insert(b, 1, 'x')
-# insert(b, 1, 'o')
-# # insert(b, 1, 'o')
-# # insert(b, 1, 'x')
-#
-#
-# insert(b, 2, 'x')
-# insert(b, 2, 'x')
-# # insert(b, 2, 'o')
-# insert(b, 2, 'o')
-#
-# insert(b, 3, 'x')
-# insert(b, 3, 'o')
-# # insert(b, 3, 'x')
-# # insert(b, 3, 'x')
-#
-# insert(b, 4, 'o')
-# insert(b, 4, 'o')
-# # insert(b, 4, 'o')
-# # insert(b, 4, 'x')
-#
-# insert(b, 5, 'o')
-# insert(b, 5, 'x')
-# # insert(b, 5, 'o')
-# insert(b, 5, 'x')
-
-# println("initial board")
-# display(b)
-#
-# while (!game_over(b))
-#    println("Move: ", moves," Turn: ",turn)
-#    ind = determine_move(b, turn)
-#    insert(b, ind, turn)
-#    println("playing col: ", ind)
-#    display(b)
-#    global turn = switch(turn)
-#    global moves+= 1
-#    println("\n\n")
-# end
-# println("Moves: ",moves)
-#
-
-
 #################       Human VS AI Game   ###############
-function H_vs_AI_minimax(lookahead::Int)
+function H_vs_AI(b::gameBoard, mode::Int)
    while(!game_over(b))
+      println("\nPlayer x: AI ")
+      print("AI thinking . . .  ")
 
-      println("\nMove: ", x_moves," Turn: ",turn)
-      ind = determine_move(b, turn)
+      if mode == 2
+         ind = determine_move(b, turn)
+      else
+         ind = determine_move_MCTS(b, turn)
+      end
+
       insert(b, ind, turn)
-      println("playing col: ", ind)
+      println("playing column ", ind)
       display(b)
       global turn = switch(turn)
       global x_moves+= 1
@@ -669,25 +603,51 @@ function H_vs_AI_minimax(lookahead::Int)
          break
       end
 
-      println("\nMove: ", o_moves," Turn: ",turn)
+      println("\nPlayer o:")
       valid = false
       while(!valid)
-         print("Enter next move for ",":")
+         print("Enter your move:")
          m = parse(Int, readline())
-         println("your move: ", m)
          valid = insert(b, m, turn)
          if !valid
-            println("illegal column")
+            println("please enter a legal column\n")
          end
       end
       display(b)
       global turn = switch(turn)
       global o_moves+= 1
-
    end
    results(b)
 end
 
+################       MAIN       ################
+
+b = gameBoard(6,7)
+println("\n\n############################################\n\n")
+println("     WELCOME TO THE GAME OF CONNECT FOUR\n      ")
+println("\n############################################\n\n")
+println("     Human, please choose your opponent:
+
+         (1) Another human
+         (2) AI - Minimax
+         (3) AI - MCTS\n")
+opp = readline()
+if opp == "r"
+   println("random!")
+else
+   m = parse(Int, opp)
+   println("next move: ", m)
+end
+
+println("\tStarting game\n")
+if opp == 1
+   H_vs_H(b)
+elseif opp ==2
+   println("\tNote: for the random move option, enter r")
+   H_vs_AI(b, 2)
+else
+   H_vs_AI(b, 3)
+end
 
 
 ###################   AI vs Random computer ##################
@@ -719,9 +679,3 @@ end
 #
 # end
 # results(b)
-
-
-
-### MAIN
-# H_vs_AI_minimax(5)
-# H_vs_H()

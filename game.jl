@@ -4,6 +4,8 @@ global c = 2
 global turn = 'x'
 global x_moves = 0
 global o_moves = 0
+global rand_version = false
+global random = false
 
 abstract type Player end
 mutable struct Human <: Player
@@ -348,7 +350,37 @@ function determine_move(b::gameBoard,c::Char)::Int
          scores[i] = -1000
       end
    end
-   return max_score_col(scores)
+
+   #calculate random move
+   if rand_version
+      rand_scores = Array{Int}(undef,1, b.cols)
+      newb = gameBoard(b)
+      rand1 = play_rand(newb)
+      insert(newb, rand1, c)
+      rand2 = play_rand(newb)
+      insert(newb, rand2, switch(c))
+      for i = 1: newb.cols
+         if insert(newb, i, c)
+            rand_scores[i] = minimax(newb, 1, 4, false, switch(c),i) ########
+            remove(newb,i)
+         else
+            rand_scores[i] = -1000
+         end
+      end
+
+      max = max_score_col(scores)
+      randmax = max_score_col(rand_scores)
+      println("max: ", max, " randmax: ", randmax)
+      if scores[max] >= rand_scores[randmax]
+         return max
+      else
+         global random = true
+         return rand1
+      end
+   else
+      
+      return  max_score_col(scores)
+   end
 end
 
 
@@ -526,7 +558,16 @@ end
 
 #randomly chooses column to play
 function play_rand(b::gameBoard)::Int
-   return rand(1:b.cols)
+
+   legal = Int[] #array of indices
+   for i=1:b.cols
+      if insert(b,i, ' ')
+         remove(b,i)
+         push!(legal, i)
+      end
+   end
+
+   return legal[rand(1:length(legal))]
 end
 
 
@@ -587,7 +628,11 @@ function H_vs_AI(b::gameBoard, mode::Int)
       println("\nPlayer x: AI ")
       print("AI thinking . . .  ")
 
-      if mode == 2
+      if random
+         println("AI played random")
+         ind = play_rand(b)
+         global random = false
+      elseif mode == 2
          ind = determine_move(b, turn)
       else
          ind = determine_move_MCTS(b, turn)
@@ -605,14 +650,28 @@ function H_vs_AI(b::gameBoard, mode::Int)
 
       println("\nPlayer o:")
       valid = false
-      while(!valid)
-         print("Enter your move:")
-         m = parse(Int, readline())
+      if random
+         m = play_rand(b)
          valid = insert(b, m, turn)
-         if !valid
-            println("please enter a legal column\n")
+         global random = false
+      else
+         while(!valid)
+            print("Enter your move:")
+            move = readline()
+            if move == "r"
+               global random = true
+               m = play_rand(b)
+            else
+               m = parse(Int, move)
+               println("next move: ", m)
+            end
+            valid = insert(b, m, turn)
+            if !valid
+               println("please enter a legal column\n")
+            end
          end
       end
+
       display(b)
       global turn = switch(turn)
       global o_moves+= 1
@@ -622,7 +681,7 @@ end
 
 ################       MAIN       ################
 
-b = gameBoard(6,7)
+b = gameBoard(5,5)
 println("\n\n############################################\n\n")
 println("     WELCOME TO THE GAME OF CONNECT FOUR\n      ")
 println("\n############################################\n\n")
@@ -630,52 +689,18 @@ println("     Human, please choose your opponent:
 
          (1) Another human
          (2) AI - Minimax
-         (3) AI - MCTS\n")
-opp = readline()
-if opp == "r"
-   println("random!")
-else
-   m = parse(Int, opp)
-   println("next move: ", m)
-end
+         (3) AI - Minimax - Random move version
+         (4) AI - MCTS\n")
+opp = parse(Int, readline())
 
 println("\tStarting game\n")
 if opp == 1
    H_vs_H(b)
-elseif opp ==2
-   println("\tNote: for the random move option, enter r")
+elseif opp == 2
+   H_vs_AI(b, 2)
+elseif opp == 3
+   rand_version = true
    H_vs_AI(b, 2)
 else
    H_vs_AI(b, 3)
 end
-
-
-###################   AI vs Random computer ##################
-# while(!game_over(b))
-#
-#    println("\nMove: ", x_moves," Turn: ",turn)
-#    ind = determine_move(b, turn)
-#    insert(b, ind, turn)
-#    println("playing col: ", ind)
-#    display(b)
-#    global turn = switch(turn)
-#    global x_moves+= 1
-#
-#    if game_over(b)
-#       break
-#    end
-#
-#    println("\nMove: ", o_moves," Turn: ",turn)
-#    valid = false
-#    while(!valid)
-#       ind = play_rand(b) # determine_move(b, turn)
-#       valid = insert(b, ind, turn)
-#       if !valid
-#          println("illegal column")
-#       end
-#    end
-#    global turn = switch(turn)
-#    global o_moves+= 1
-#
-# end
-# results(b)

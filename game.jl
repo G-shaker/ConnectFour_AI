@@ -353,36 +353,52 @@ function determine_move(b::gameBoard,c::Char)::Int
 
    #calculate random move
    if rand_version
-      rand_scores = Array{Int}(undef,1, b.cols)
+      rand_scores = Array{Float64}(undef,1, b.cols)
+      rand_scores2 = Float64[]
       newb = gameBoard(b)
-      rand1 = play_rand(newb)
-      insert(newb, rand1, c)
-      rand2 = play_rand(newb)
-      insert(newb, rand2, switch(c))
       for i = 1: newb.cols
          if insert(newb, i, c)
-            rand_scores[i] = minimax(newb, 1, 4, false, switch(c),i) ########
+            for j=1:newb.cols
+               if insert(newb, j, switch(c))
+                  push!(rand_scores2, minimax(newb, 1, 4, true, c, j))
+                  remove(newb,j)
+               else
+                  push!(rand_scores2, -1000)
+               end
+            end
             remove(newb,i)
          else
             rand_scores[i] = -1000
          end
-      end
+         #take average of scores in depth 2
+         avg = mean(rand_scores2)
+         empty!(rand_scores2)
+         # println("average: ", avg)
+         rand_scores[i] = avg
+      end  #end for loop
 
+      randmax = mean(rand_scores)
       max = max_score_col(scores)
-      randmax = max_score_col(rand_scores)
-      println("max: ", max, " randmax: ", randmax)
-      if scores[max] >= rand_scores[randmax]
+      # println("max: ", scores[max] ," in col ", max, " randmax: ", randmax)
+      if scores[max] >= randmax
          return max
       else
          global random = true
-         return rand1
+         return play_rand(b)
       end
    else
-      
       return  max_score_col(scores)
    end
 end
 
+#takes array of values and returns the average
+function mean(a::Array{Float64})::Float64
+   sum = 0
+   for i = 1: length(a)
+      sum += a[i]
+   end
+   return sum/length(a)
+end
 
 ################       Monte Carlo Tree Search      ################
 mutable struct state
@@ -681,7 +697,7 @@ end
 
 ################       MAIN       ################
 
-b = gameBoard(5,5)
+b = gameBoard(6,7)
 println("\n\n############################################\n\n")
 println("     WELCOME TO THE GAME OF CONNECT FOUR\n      ")
 println("\n############################################\n\n")
@@ -700,6 +716,7 @@ elseif opp == 2
    H_vs_AI(b, 2)
 elseif opp == 3
    rand_version = true
+   println("To force random move, enter 'r' ")
    H_vs_AI(b, 2)
 else
    H_vs_AI(b, 3)
